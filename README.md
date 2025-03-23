@@ -226,10 +226,192 @@ Fired when an operational error occurs during bot execution that requires attent
    - **PAUSE**: Price in BUFFER_ZONE or out of buy/sell boundaries
    - **STOP**: Price beyond stop boundaries (requires manual restart)
 
-## Future improvements
+## Implementation
 
-- Smart zone boundaries recalculation to ignore manipulations
+This section outlines the technical implementation details of the Spot Trading Signaling Service.
 
-## Additional Notes
+### REST API
 
-When writing this doc we want to be concise and specific but not at the expense of illustration
+The service exposes the following REST endpoints for management and data retrieval:
+
+#### Instance Management
+
+##### Create Signal Service Instance
+- **Method**: POST
+- **Path**: `/api/v1/instances`
+- **Request Body**: Configuration input (as shown in Configuration Input section)
+- **Response**: Instance creation output (as shown in Instance Creation Output section)
+
+##### Get Instance Details
+- **Method**: GET
+- **Path**: `/api/v1/instances/{instanceId}`
+- **Response**: Current instance details with zones and status
+
+##### List User Instances
+- **Method**: GET
+- **Path**: `/api/v1/instances?userId={userId}`
+- **Response**: List of active instances for the user
+
+#### Zone Management
+
+##### Recalculate Zones
+- **Method**: POST
+- **Path**: `/api/v1/instances/{instanceId}/zones/recalculate`
+- **Response**: Zone recalculation event data
+
+##### Get Current Zones
+- **Method**: GET
+- **Path**: `/api/v1/instances/{instanceId}/zones`
+- **Response**: Current zone configuration
+
+#### Event Retrieval
+
+##### Get Events
+- **Method**: GET
+- **Path**: `/api/v1/instances/{instanceId}/events?type={eventType}`
+- **Response**: Last 100 events of specified type (or all types if not specified) ordered by timestamp descending
+- **Notes**: 
+  - To get signals, use `type=SIGNAL`
+  - Other valid types: `ZONE_RECALCULATION`, `ZONE_CROSSING`, `STATUS_CHANGE`, `ERROR`
+  - If no type is specified, returns all event types
+
+#### Service Control
+
+##### Change Service Status
+- **Method**: PUT
+- **Path**: `/api/v1/instances/{instanceId}/status`
+- **Request Body**:
+```json
+{
+  "status": "ACTIVE", // ACTIVE, PAUSED, STOPPED
+  "reason": "MANUAL_RESTART"
+}
+```
+- **Response**: Status change event data
+
+##### Update Configuration
+- **Method**: PUT
+- **Path**: `/api/v1/instances/{instanceId}/config`
+- **Request Body**: Updated configuration parameters
+- **Response**: Updated instance details
+
+## Implementation -> Persistence
+
+### Database Architecture
+
+The service uses a document database (such as MongoDB, Firestore, or similar) to store instance configurations, state, and generated events. This approach provides flexibility for schema evolution and naturally represents the JSON structures used throughout the service.
+
+### Collections
+
+#### Instances Collection
+
+**Document Structure**
+
+```
+{
+  "instanceId": UUID,                // e.g., "550e8400-e29b-41d4-a716-446655440000"
+  "userId": String,                  // e.g., "user123"
+  "symbol": String,                  // e.g., "BTC/USDT"
+  "timeframe": Number,               // e.g., 60 (in minutes)
+  "historyMinutes": Number,          // e.g., 14400 (10 days)
+  "bufferPercentage": Number,        // e.g., 0.004 (0.4%)
+  "stopPlankPercentage": Number,     // e.g., 0.05 (5%)
+  "checkFrequency": Number,          // e.g., 60 (in minutes)
+  "minBuySellFrequency": Number,     // e.g., 240 (in minutes)
+  "status": String,                  // e.g., "ACTIVE", "INITIALIZED", "PAUSED", "STOPPED"
+  "createdAt": Timestamp,            // e.g., "2025-03-23T14:00:00Z"
+  "lastUpdatedAt": Timestamp,        // e.g., "2025-03-23T14:30:00Z"
+  "lastSignalTimestamps": {
+    "BUY": Timestamp,                // e.g., "2025-03-23T14:30:00Z"
+    "SELL": Timestamp                // e.g., "2025-03-22T10:15:00Z"
+  },
+  "currentZone": String,             // e.g., "BUFFER_ZONE", "BUY_ZONE", "SELL_ZONE"
+  "zoneConfig": {
+    "stopHighPrice": Number,         // e.g., 92565.51
+    "sellTopPrice": Number,          // e.g., 90750.50
+    "sellBottomPrice": Number,       // e.g., 87431.25
+    "buyTopPrice": Number,           // e.g., 87068.75
+    "buyBottomPrice": Number,        // e.g., 83750.50
+    "stopLowPrice": Number,          // e.g., 82075.49
+    "calculatedAt": Timestamp,       // e.g., "2025-03-23T14:00:00Z"
+    "zoneStartsAt": Timestamp,       // e.g., "2025-03-13T14:00:00Z"
+    "zoneEndsAt": Timestamp          // e.g., "2025-03-23T14:00:00Z"
+  }
+}
+```
+
+The Instances collection supports these operations:
+- Creating new service instances from user configuration
+- Retrieving instance details by ID
+- Listing all instances for a specific user
+- Updating instance status (with timestamps and reason)
+- Modifying configuration parameters
+- Recalculating and updating price zones
+- Tracking current price zone and last signal timestamps
+
+#### Events Collection
+
+**Document Structure**
+
+```
+{
+  "eventId": UUID,                   // e.g., "7b83d310-5c99-4e69-a9a2-0cb81368f000"
+  "eventType": String,               // e.g., "SIGNAL", "ZONE_RECALCULATION", "ZONE_CROSSING", "STATUS_CHANGE", "ERROR"
+  "timestamp": Timestamp,            // e.g., "2025-03-23T14:30:00Z"
+  "userId": String,                  // e.g., "user123"
+  "instanceId": UUID,                // e.g., "550e8400-e29b-41d4-a716-446655440000"
+  "symbol": String,                  // e.g., "BTC/USDT"
+  
+  // Fields for SIGNAL events
+  "price": Number,                   // e.g., 87250.45
+  "signal": String,                  // e.g., "BUY", "SELL", "PAUSE", "STOP"
+  
+  // Fields for ZONE_RECALCULATION events
+  "zoneConfig": {
+    "stopHighPrice": Number,         // e.g., 93125.22
+    "sellTopPrice": Number,          // e.g., 91300.25
+    "sellBottomPrice": Number,       // e.g., 87937.50
+    "buyTopPrice": Number,           // e.g., 87562.50
+    "buyBottomPrice": Number,        // e.g., 84200.75
+    "stopLowPrice": Number,          // e.g., 82516.74
+    "zoneStartsAt": Timestamp,       // e.g., "2025-03-14T00:00:00Z"
+    "zoneEndsAt": Timestamp          // e.g., "2025-03-24T00:00:00Z"
+  },
+  "reason": String,                  // e.g., "ZONE_CHANGE_PROPOSAL", "SCHEDULED_RECALCULATION"
+  
+  // Fields for ZONE_CROSSING events
+  "previousZone": String,            // e.g., "BUY_ZONE"
+  "currentZone": String,             // e.g., "BUFFER_ZONE"
+  "direction": String,               // e.g., "UPWARD", "DOWNWARD"
+  
+  // Fields for STATUS_CHANGE events
+  "previousStatus": String,          // e.g., "ACTIVE"
+  "newStatus": String,               // e.g., "STOPPED"
+  "reason": String,                  // e.g., "STOP_LEVEL_REACHED", "USER_REQUESTED"
+  
+  // Fields for ERROR events
+  "errorCode": String,               // e.g., "DATA_FETCH_FAILURE"
+  "errorMessage": String             // e.g., "Failed to retrieve price data"
+}
+```
+
+The Events collection supports these operations:
+- Recording events of all types (SIGNAL, ZONE_RECALCULATION, ZONE_CROSSING, STATUS_CHANGE, ERROR)
+- Retrieving events by instance ID with optional filtering by event type
+- Filtering events by time range with pagination support
+- Finding the most recent signal of a specific type to enforce minimum signal frequency
+
+### Indexes
+
+To ensure optimal performance, the following indexes are maintained:
+
+- **Instances Collection**:
+  - `instanceId`: Unique index for direct lookup
+  - `userId`: Index for retrieving all instances belonging to a user
+  - Compound index on `(userId, status)` for filtered queries
+
+- **Events Collection**:
+  - `eventId`: Unique index
+  - `instanceId`: Index for retrieving all events for an instance
+  - `timestamp`: Index for time-based queries
+  - Compound index on `(instanceId, eventType, timestamp)` for filtered event retrieval
