@@ -281,10 +281,9 @@ The service exposes the following REST endpoints for management and data retriev
 - **Method**: PUT
 - **Path**: `/api/v1/instances/{instanceId}/status`
 - **Request Body**:
-```json
+```js
 {
   "status": "ACTIVE", // ACTIVE, PAUSED, STOPPED
-  "reason": "MANUAL_RESTART"
 }
 ```
 - **Response**: Status change event data
@@ -400,18 +399,3 @@ The Events collection supports these operations:
 - Retrieving events by instance ID with optional filtering by event type
 - Filtering events by time range with pagination support
 - Finding the most recent signal of a specific type to enforce minimum signal frequency
-
-### Indexes
-
-To ensure optimal performance, the following indexes are maintained:
-
-- **Instances Collection**:
-  - `instanceId`: Unique index for direct lookup
-  - `userId`: Index for retrieving all instances belonging to a user
-  - Compound index on `(userId, status)` for filtered queries
-
-- **Events Collection**:
-  - `eventId`: Unique index
-  - `instanceId`: Index for retrieving all events for an instance
-  - `timestamp`: Index for time-based queries
-  - Compound index on `(instanceId, eventType, timestamp)` for filtered event retrieval
