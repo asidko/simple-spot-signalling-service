@@ -11,7 +11,7 @@ Divides price range into three strategic zones:
 - `BUFFER_ZONE`: Middle neutral zone (0.4% by default) accounting for transaction fees where no signals are generated
 - `BUY_ZONE`: Lower accumulation region (`BUY_TOP_PRICE` to `BUY_BOTTOM_PRICE`) where BUY signals are generated when price enters
 
-![zone-trading-illustration](https://github.com/user-attachments/assets/da5c89d7-a7c5-4dfc-ac8c-2ee34b493513)
+<img width="400" alt="zones illustration" src="https://github.com/user-attachments/assets/cd2064a9-9761-4bfd-ada3-2b7b83147591" />
 
 **Calculation:** Find min/max prices over the analysis period (e.g., 10 days). Create a buffer zone in the middle, with buy zone below and sell zone above. The buy zone bottom is the minimum price, and the sell zone top is the maximum price observed during the period.
 
@@ -157,11 +157,9 @@ The service exposes the following REST endpoints for management and data retriev
 - **Path**: `/api/v1/instances/{instanceId}/signals?limit=100`
 - **Response**: Signal events ordered by timestamp descending, up to the specified limit
 
-## Implementation -> Persistence
+## Database Architecture
 
-### Database Architecture
-
-The service uses a document database (such as MongoDB, Firestore, or similar) to store instance configurations, state, and generated signals. This approach provides flexibility for schema evolution and naturally represents the JSON structures used throughout the service.
+The service uses a document database to store instance configurations, state, and generated signals.
 
 ### Collections
 
