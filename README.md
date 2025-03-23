@@ -19,36 +19,59 @@ Divides price range into strategic zones:
 
 ## Configuration Input
 
-```json
+```js
 {
-  "userId": "user123",          // User identifier
-  "symbol": "BTC/USDT",
-  "timeframe": 60,              // In minutes (60 = 1 hour candles)
-  "historyMinutes": 14400,      // In minutes (14400 = 10 days)
-  "bufferPercentage": 0.004,    // 0.4% for middle buffer (to cover fees)
-  "stopPlankPercentage": 0.05,  // Price goes 5% beyond min/max - we must stop
-  "checkFrequency": 60          // Check for signal every 1 hour
+  // User identifier
+  "userId": "user123",          
+  // Trading pair
+  "symbol": "BTC/USDT",         
+  // In minutes (60 = 1 hour candles)
+  "timeframe": 60,              
+  // In minutes (14400 = 10 days)
+  "historyMinutes": 14400,      
+  // 0.4% for middle buffer (to cover fees)
+  "bufferPercentage": 0.004,    
+  // Price goes 5% beyond min/max - we must stop
+  "stopPlankPercentage": 0.05,  
+  // Check for signal every 1 hour
+  "checkFrequency": 60,         
+  // Minimum time (in minutes) between consecutive BUY or SELL signals (4 hours)
+  "minBuySellFrequency": 240    
 }
 ```
 
-## Bot Creation Output
+## Instance Creation Output
 
-```json
+```js
 {
-  "userId": "user123",
-  "instanceId": "550e8400-e29b-41d4-a716-446655440000", // UUID for this instance
-  "status": "INITIALIZED",
-  "createdAt": "2025-03-23T14:00:00Z",
-  "zoneConfig": {
-    "stopHighPrice": 92565.51,
-    "sellTopPrice": 90750.50,
-    "sellBottomPrice": 87431.25,
-    "buyTopPrice": 87068.75,
-    "buyBottomPrice": 83750.50,
-    "stopLowPrice": 82075.49,
-    "calculatedAt": "2025-03-23T14:00:00Z",
-    "zoneStartsAt": "2025-03-13T14:00:00Z", // Start of analysis period
-    "zoneEndsAt": "2025-03-23T14:00:00Z"    // End of analysis period
+  // User identifier
+  "userId": "user123",                                  
+  // UUID for this instance
+  "instanceId": "550e8400-e29b-41d4-a716-446655440000", 
+  // Current service status
+  "status": "INITIALIZED",                              
+  // Service creation timestamp
+  "createdAt": "2025-03-23T14:00:00Z",                  
+  // Price zone configuration
+  "zoneConfig": {                                       
+    // Emergency upper boundary
+    "stopHighPrice": 92565.51,                          
+    // Upper sell zone boundary
+    "sellTopPrice": 90750.50,                           
+    // Lower sell zone boundary
+    "sellBottomPrice": 87431.25,                        
+    // Upper buy zone boundary
+    "buyTopPrice": 87068.75,                            
+    // Lower buy zone boundary
+    "buyBottomPrice": 83750.50,                         
+    // Emergency lower boundary
+    "stopLowPrice": 82075.49,                           
+    // When zones were calculated
+    "calculatedAt": "2025-03-23T14:00:00Z",             
+    // Start of analysis period
+    "zoneStartsAt": "2025-03-13T14:00:00Z",             
+    // End of analysis period
+    "zoneEndsAt": "2025-03-23T14:00:00Z"                
   }
 }
 ```
@@ -56,80 +79,137 @@ Divides price range into strategic zones:
 ## Event Types
 
 ### Signal Event
-```json
+Emitted when price enters a buy or sell zone and the minimum time since the last signal has elapsed.
+
+```js
 {
-  "eventType": "SIGNAL",
-  "timestamp": "2025-03-23T14:30:00Z",
-  "userId": "user123",
-  "instanceId": "550e8400-e29b-41d4-a716-446655440000",
-  "symbol": "BTC/USDT",
-  "price": 87250.45,
-  "signal": "BUY"
+  // Type of event
+  "eventType": "SIGNAL",                                
+  // When signal was generated
+  "timestamp": "2025-03-23T14:30:00Z",                  
+  // User identifier
+  "userId": "user123",                                  
+  // Service instance ID
+  "instanceId": "550e8400-e29b-41d4-a716-446655440000", 
+  // Trading pair
+  "symbol": "BTC/USDT",                                 
+  // Current price
+  "price": 87250.45,                                    
+  // Signal type (BUY/SELL/PAUSE/STOP)
+  "signal": "BUY"                                       
 }
 ```
 
 ### Zone Recalculation Event
-```json
+Triggered when price zones are recalculated, either automatically or by manual user request.
+
+```js
 {
-  "eventType": "ZONE_RECALCULATION",
-  "timestamp": "2025-03-24T00:00:00Z",
-  "userId": "user123",
-  "instanceId": "550e8400-e29b-41d4-a716-446655440000",
-  "symbol": "BTC/USDT",
-  "zoneConfig": {
-    "stopHighPrice": 93125.22,
-    "sellTopPrice": 91300.25,
-    "sellBottomPrice": 87937.50,
-    "buyTopPrice": 87562.50,
-    "buyBottomPrice": 84200.75,
-    "stopLowPrice": 82516.74,
-    "zoneStartsAt": "2025-03-14T00:00:00Z",
-    "zoneEndsAt": "2025-03-24T00:00:00Z"
+  // Type of event
+  "eventType": "ZONE_RECALCULATION",                    
+  // When recalculation occurred
+  "timestamp": "2025-03-24T00:00:00Z",                  
+  // User identifier
+  "userId": "user123",                                  
+  // Service instance ID
+  "instanceId": "550e8400-e29b-41d4-a716-446655440000", 
+  // Trading pair
+  "symbol": "BTC/USDT",                                 
+  // New price zones
+  "zoneConfig": {                                       
+    // New emergency upper boundary
+    "stopHighPrice": 93125.22,                          
+    // New upper sell zone boundary
+    "sellTopPrice": 91300.25,                           
+    // New lower sell zone boundary
+    "sellBottomPrice": 87937.50,                        
+    // New upper buy zone boundary
+    "buyTopPrice": 87562.50,                            
+    // New lower buy zone boundary
+    "buyBottomPrice": 84200.75,                         
+    // New emergency lower boundary
+    "stopLowPrice": 82516.74,                           
+    // Start of new analysis period
+    "zoneStartsAt": "2025-03-14T00:00:00Z",             
+    // End of new analysis period
+    "zoneEndsAt": "2025-03-24T00:00:00Z"                
   },
-  "reason": "ZONE_CHANGE_PROPOSAL"
+  // Reason for recalculation
+  "reason": "ZONE_CHANGE_PROPOSAL"                      
 }
 ```
 
 ### Zone Crossing Event
-```json
+Generated when price moves from one zone to another (e.g., from BUY_ZONE to BUFFER_ZONE), providing opportunity to track price movement patterns.
+
+```js
 {
-  "eventType": "ZONE_CROSSING",
-  "timestamp": "2025-03-23T18:15:00Z",
-  "userId": "user123",
-  "instanceId": "550e8400-e29b-41d4-a716-446655440000",
-  "symbol": "BTC/USDT",
-  "price": 87500.25,
-  "previousZone": "BUY_ZONE",
-  "currentZone": "BUFFER_ZONE",
-  "direction": "UPWARD"
+  // Type of event
+  "eventType": "ZONE_CROSSING",                         
+  // When zone crossing occurred
+  "timestamp": "2025-03-23T18:15:00Z",                  
+  // User identifier
+  "userId": "user123",                                  
+  // Service instance ID
+  "instanceId": "550e8400-e29b-41d4-a716-446655440000", 
+  // Trading pair
+  "symbol": "BTC/USDT",                                 
+  // Current price
+  "price": 87500.25,                                    
+  // Zone price was in
+  "previousZone": "BUY_ZONE",                           
+  // Zone price moved to
+  "currentZone": "BUFFER_ZONE",                         
+  // Price movement direction
+  "direction": "UPWARD"                                 
 }
 ```
 
 ### Status Change Event
-```json
+Occurs when the bot's operational status changes (e.g., from ACTIVE to STOPPED), typically due to emergency conditions or user actions.
+
+```js
 {
-  "eventType": "STATUS_CHANGE",
-  "timestamp": "2025-03-23T22:45:00Z",
-  "userId": "user123",
-  "instanceId": "550e8400-e29b-41d4-a716-446655440000",
-  "symbol": "BTC/USDT",
-  "previousStatus": "ACTIVE",
-  "newStatus": "STOPPED",
-  "reason": "STOP_LEVEL_REACHED",
-  "price": 82000.15
+  // Type of event
+  "eventType": "STATUS_CHANGE",                         
+  // When status changed
+  "timestamp": "2025-03-23T22:45:00Z",                  
+  // User identifier
+  "userId": "user123",                                  
+  // Service instance ID
+  "instanceId": "550e8400-e29b-41d4-a716-446655440000", 
+  // Trading pair
+  "symbol": "BTC/USDT",                                 
+  // Previous service status
+  "previousStatus": "ACTIVE",                           
+  // New service status
+  "newStatus": "STOPPED",                               
+  // Reason for status change
+  "reason": "STOP_LEVEL_REACHED",                       
+  // Price at status change
+  "price": 82000.15                                     
 }
 ```
 
 ### Error Event
-```json
+Fired when an operational error occurs during bot execution that requires attention but doesn't necessarily stop the bot.
+
+```js
 {
-  "eventType": "ERROR",
-  "timestamp": "2025-03-23T16:20:00Z",
-  "userId": "user123",
-  "instanceId": "550e8400-e29b-41d4-a716-446655440000",
-  "symbol": "BTC/USDT",
-  "errorCode": "DATA_FETCH_FAILURE",
-  "errorMessage": "Failed to retrieve price data from exchange API"
+  // Type of event
+  "eventType": "ERROR",                                 
+  // When error occurred
+  "timestamp": "2025-03-23T16:20:00Z",                  
+  // User identifier
+  "userId": "user123",                                  
+  // Service instance ID
+  "instanceId": "550e8400-e29b-41d4-a716-446655440000", 
+  // Trading pair
+  "symbol": "BTC/USDT",                                 
+  // Error code
+  "errorCode": "DATA_FETCH_FAILURE",                    
+  // Error description
+  "errorMessage": "Failed to retrieve price data from exchange API" 
 }
 ```
 
@@ -137,6 +217,8 @@ Divides price range into strategic zones:
 
 1. **Initialization**: Load config, fetch data, calculate zones
 2. **Monitoring**: Check price at intervals, compare to zones, emit signals
+   - Price is checked at the frequency defined by `checkFrequency`
+   - BUY/SELL signals are only emitted if at least `minBuySellFrequency` minutes have passed since the last signal of the same type
 3. **Manual Recalculation**: User explicitly requests zone recalculation when appropriate
 4. **Signals**:
    - **BUY**: Price in BUY_ZONE
@@ -148,6 +230,6 @@ Divides price range into strategic zones:
 
 - Smart zone boundaries recalculation to ignore manipulations
 
-## Additional nodes
+## Additional Notes
 
-When writing this doc we want to be consice and specific but not at the expense of illustration
+When writing this doc we want to be concise and specific but not at the expense of illustration
