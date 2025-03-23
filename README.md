@@ -13,7 +13,7 @@ Divides price range into three strategic zones:
 
 ![zone-trading-illustration](https://github.com/user-attachments/assets/da5c89d7-a7c5-4dfc-ac8c-2ee34b493513)
 
-**Calculation:** Find min/max prices over specified period (e.g 10 days). Place `BUFFER_ZONE` around midpoint. The `SELL_TOP_PRICE` equals the maximum price and the `BUY_BOTTOM_PRICE` equals the minimum price observed during the period.
+**Calculation:** Find min/max prices over the analysis period (e.g., 10 days). Create a buffer zone in the middle, with buy zone below and sell zone above. The buy zone bottom is the minimum price, and the sell zone top is the maximum price observed during the period.
 
 ## Configuration Input
 
@@ -96,7 +96,7 @@ Emitted when price enters a buy or sell zone and the minimum time since the last
 1. **Initialization**: Load config, fetch data, calculate zones
 2. **Monitoring**: Check price at intervals, compare to zones, emit signals
    - Price is checked at the frequency defined by `checkFrequency`
-3. **Manual Recalculation**: User explicitly requests zone recalculation when appropriate
+3. **Manual Recalculation**: User can request zone recalculation when market conditions have significantly changed or after a specified time period (e.g., weekly) to ensure zones reflect current market dynamics
 4. **Signals**:
    - **BUY**: Price in BUY_ZONE
    - **SELL**: Price in SELL_ZONE
