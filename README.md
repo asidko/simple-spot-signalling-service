@@ -11,7 +11,7 @@ Divides price range into three strategic zones:
 - `BUFFER_ZONE`: Middle neutral zone (0.4% by default) accounting for transaction fees where no signals are generated
 - `BUY_ZONE`: Lower accumulation region (`BUY_TOP_PRICE` to `BUY_BOTTOM_PRICE`) where BUY signals are generated when price enters
 
-![zone-trading-illustration](https://github.com/user-attachments/assets/40feae58-3554-49c0-b19d-67666965b1f9)
+![zone-trading-illustration](https://github.com/user-attachments/assets/da5c89d7-a7c5-4dfc-ac8c-2ee34b493513)
 
 **Calculation:** Find min/max prices over specified period (e.g 10 days). Place `BUFFER_ZONE` around midpoint. The `SELL_TOP_PRICE` equals the maximum price and the `BUY_BOTTOM_PRICE` equals the minimum price observed during the period.
 
