@@ -100,119 +100,6 @@ Emitted when price enters a buy or sell zone and the minimum time since the last
 }
 ```
 
-### Zone Recalculation Event
-Triggered when price zones are recalculated, either automatically or by manual user request.
-
-```js
-{
-  // Type of event
-  "eventType": "ZONE_RECALCULATION",                    
-  // When recalculation occurred
-  "timestamp": "2025-03-24T00:00:00Z",                  
-  // User identifier
-  "userId": "user123",                                  
-  // Service instance ID
-  "instanceId": "550e8400-e29b-41d4-a716-446655440000", 
-  // Trading pair
-  "symbol": "BTC/USDT",                                 
-  // New price zones
-  "zoneConfig": {                                       
-    // New emergency upper boundary
-    "stopHighPrice": 93125.22,                          
-    // New upper sell zone boundary
-    "sellTopPrice": 91300.25,                           
-    // New lower sell zone boundary
-    "sellBottomPrice": 87937.50,                        
-    // New upper buy zone boundary
-    "buyTopPrice": 87562.50,                            
-    // New lower buy zone boundary
-    "buyBottomPrice": 84200.75,                         
-    // New emergency lower boundary
-    "stopLowPrice": 82516.74,                           
-    // Start of new analysis period
-    "zoneStartsAt": "2025-03-14T00:00:00Z",             
-    // End of new analysis period
-    "zoneEndsAt": "2025-03-24T00:00:00Z"                
-  },
-  // Reason for recalculation
-  "reason": "ZONE_CHANGE_PROPOSAL"                      
-}
-```
-
-### Zone Crossing Event
-Generated when price moves from one zone to another (e.g., from BUY_ZONE to BUFFER_ZONE), providing opportunity to track price movement patterns.
-
-```js
-{
-  // Type of event
-  "eventType": "ZONE_CROSSING",                         
-  // When zone crossing occurred
-  "timestamp": "2025-03-23T18:15:00Z",                  
-  // User identifier
-  "userId": "user123",                                  
-  // Service instance ID
-  "instanceId": "550e8400-e29b-41d4-a716-446655440000", 
-  // Trading pair
-  "symbol": "BTC/USDT",                                 
-  // Current price
-  "price": 87500.25,                                    
-  // Zone price was in
-  "previousZone": "BUY_ZONE",                           
-  // Zone price moved to
-  "currentZone": "BUFFER_ZONE",                         
-  // Price movement direction
-  "direction": "UPWARD"                                 
-}
-```
-
-### Status Change Event
-Occurs when the bot's operational status changes (e.g., from ACTIVE to STOPPED), typically due to emergency conditions or user actions.
-
-```js
-{
-  // Type of event
-  "eventType": "STATUS_CHANGE",                         
-  // When status changed
-  "timestamp": "2025-03-23T22:45:00Z",                  
-  // User identifier
-  "userId": "user123",                                  
-  // Service instance ID
-  "instanceId": "550e8400-e29b-41d4-a716-446655440000", 
-  // Trading pair
-  "symbol": "BTC/USDT",                                 
-  // Previous service status
-  "previousStatus": "ACTIVE",                           
-  // New service status
-  "newStatus": "STOPPED",                               
-  // Reason for status change
-  "reason": "STOP_LEVEL_REACHED",                       
-  // Price at status change
-  "price": 82000.15                                     
-}
-```
-
-### Error Event
-Fired when an operational error occurs during bot execution that requires attention but doesn't necessarily stop the bot.
-
-```js
-{
-  // Type of event
-  "eventType": "ERROR",                                 
-  // When error occurred
-  "timestamp": "2025-03-23T16:20:00Z",                  
-  // User identifier
-  "userId": "user123",                                  
-  // Service instance ID
-  "instanceId": "550e8400-e29b-41d4-a716-446655440000", 
-  // Trading pair
-  "symbol": "BTC/USDT",                                 
-  // Error code
-  "errorCode": "DATA_FETCH_FAILURE",                    
-  // Error description
-  "errorMessage": "Failed to retrieve price data from exchange API" 
-}
-```
-
 ## Workflow
 
 1. **Initialization**: Load config, fetch data, calculate zones
@@ -257,23 +144,19 @@ The service exposes the following REST endpoints for management and data retriev
 ##### Recalculate Zones
 - **Method**: POST
 - **Path**: `/api/v1/instances/{instanceId}/zones/recalculate`
-- **Response**: Zone recalculation event data
+- **Response**: Updated zone configuration
 
 ##### Get Current Zones
 - **Method**: GET
 - **Path**: `/api/v1/instances/{instanceId}/zones`
 - **Response**: Current zone configuration
 
-#### Event Retrieval
+#### Signal Retrieval
 
-##### Get Events
+##### Get Signals
 - **Method**: GET
-- **Path**: `/api/v1/instances/{instanceId}/events?type={eventType}`
-- **Response**: Last 100 events of specified type (or all types if not specified) ordered by timestamp descending
-- **Notes**: 
-  - To get signals, use `type=SIGNAL`
-  - Other valid types: `ZONE_RECALCULATION`, `ZONE_CROSSING`, `STATUS_CHANGE`, `ERROR`
-  - If no type is specified, returns all event types
+- **Path**: `/api/v1/instances/{instanceId}/signals`
+- **Response**: Last 100 signal events ordered by timestamp descending
 
 #### Service Control
 
@@ -286,7 +169,7 @@ The service exposes the following REST endpoints for management and data retriev
   "status": "ACTIVE", // ACTIVE, PAUSED, STOPPED
 }
 ```
-- **Response**: Status change event data
+- **Response**: Updated instance details with new status
 
 ##### Update Configuration
 - **Method**: PUT
@@ -298,7 +181,7 @@ The service exposes the following REST endpoints for management and data retriev
 
 ### Database Architecture
 
-The service uses a document database (such as MongoDB, Firestore, or similar) to store instance configurations, state, and generated events. This approach provides flexibility for schema evolution and naturally represents the JSON structures used throughout the service.
+The service uses a document database (such as MongoDB, Firestore, or similar) to store instance configurations, state, and generated signals. This approach provides flexibility for schema evolution and naturally represents the JSON structures used throughout the service.
 
 ### Collections
 
@@ -343,59 +226,29 @@ The Instances collection supports these operations:
 - Creating new service instances from user configuration
 - Retrieving instance details by ID
 - Listing all instances for a specific user
-- Updating instance status (with timestamps and reason)
+- Updating instance status
 - Modifying configuration parameters
 - Recalculating and updating price zones
 - Tracking current price zone and last signal timestamps
 
-#### Events Collection
+#### Signals Collection
 
 **Document Structure**
 
 ```
 {
-  "eventId": UUID,                   // e.g., "7b83d310-5c99-4e69-a9a2-0cb81368f000"
-  "eventType": String,               // e.g., "SIGNAL", "ZONE_RECALCULATION", "ZONE_CROSSING", "STATUS_CHANGE", "ERROR"
+  "signalId": UUID,                  // e.g., "7b83d310-5c99-4e69-a9a2-0cb81368f000"
   "timestamp": Timestamp,            // e.g., "2025-03-23T14:30:00Z"
   "userId": String,                  // e.g., "user123"
   "instanceId": UUID,                // e.g., "550e8400-e29b-41d4-a716-446655440000"
   "symbol": String,                  // e.g., "BTC/USDT"
-  
-  // Fields for SIGNAL events
   "price": Number,                   // e.g., 87250.45
-  "signal": String,                  // e.g., "BUY", "SELL", "PAUSE", "STOP"
-  
-  // Fields for ZONE_RECALCULATION events
-  "zoneConfig": {
-    "stopHighPrice": Number,         // e.g., 93125.22
-    "sellTopPrice": Number,          // e.g., 91300.25
-    "sellBottomPrice": Number,       // e.g., 87937.50
-    "buyTopPrice": Number,           // e.g., 87562.50
-    "buyBottomPrice": Number,        // e.g., 84200.75
-    "stopLowPrice": Number,          // e.g., 82516.74
-    "zoneStartsAt": Timestamp,       // e.g., "2025-03-14T00:00:00Z"
-    "zoneEndsAt": Timestamp          // e.g., "2025-03-24T00:00:00Z"
-  },
-  "reason": String,                  // e.g., "ZONE_CHANGE_PROPOSAL", "SCHEDULED_RECALCULATION"
-  
-  // Fields for ZONE_CROSSING events
-  "previousZone": String,            // e.g., "BUY_ZONE"
-  "currentZone": String,             // e.g., "BUFFER_ZONE"
-  "direction": String,               // e.g., "UPWARD", "DOWNWARD"
-  
-  // Fields for STATUS_CHANGE events
-  "previousStatus": String,          // e.g., "ACTIVE"
-  "newStatus": String,               // e.g., "STOPPED"
-  "reason": String,                  // e.g., "STOP_LEVEL_REACHED", "USER_REQUESTED"
-  
-  // Fields for ERROR events
-  "errorCode": String,               // e.g., "DATA_FETCH_FAILURE"
-  "errorMessage": String             // e.g., "Failed to retrieve price data"
+  "signal": String                   // e.g., "BUY", "SELL", "PAUSE", "STOP"
 }
 ```
 
-The Events collection supports these operations:
-- Recording events of all types (SIGNAL, ZONE_RECALCULATION, ZONE_CROSSING, STATUS_CHANGE, ERROR)
-- Retrieving events by instance ID with optional filtering by event type
-- Filtering events by time range with pagination support
+The Signals collection supports these operations:
+- Recording signal events
+- Retrieving signals by instance ID
+- Filtering signals by time range with pagination support
 - Finding the most recent signal of a specific type to enforce minimum signal frequency
