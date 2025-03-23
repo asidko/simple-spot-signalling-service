@@ -2,20 +2,18 @@
 
 ## Concept
 
-A service that monitors cryptocurrency price zones and emits trading signals. For better modularity, it only focuses on signal generation and not responsible for trade execution.
+The Spot Trading Signaling Service monitors cryptocurrency prices and generates BUY and SELL signals based on strategic price zones. It analyzes recent price history to establish buy and sell zones around a middle buffer zone, then emits actionable trading signals when prices enter these zones. The service focuses exclusively on signal generation, not trade execution, allowing for easy integration with various trading systems.
 
 ## Zone Structure
 
-Divides price range into strategic zones:
-- `STOP_HIGH_PRICE`: Emergency upper boundary that triggers full stop when breached, protecting from extreme upward volatility
-- `SELL_TOP_PRICE` to `SELL_BOTTOM_PRICE`: Upper profit-taking region where SELL signals are generated when price enters
+Divides price range into three strategic zones:
+- `SELL_ZONE`: Upper profit-taking region (`SELL_TOP_PRICE` to `SELL_BOTTOM_PRICE`) where SELL signals are generated when price enters
 - `BUFFER_ZONE`: Middle neutral zone (0.4% by default) accounting for transaction fees where no signals are generated
-- `BUY_TOP_PRICE` to `BUY_BOTTOM_PRICE`: Lower accumulation region where BUY signals are generated when price enters  
-- `STOP_LOW_PRICE`: Emergency lower boundary that triggers full stop when breached, limiting downside risk
+- `BUY_ZONE`: Lower accumulation region (`BUY_TOP_PRICE` to `BUY_BOTTOM_PRICE`) where BUY signals are generated when price enters
 
 ![zone-structure](https://github.com/user-attachments/assets/fe64a599-c645-4deb-b92f-527f8e1a0000)
 
-**Calculation:** Find min/max prices over specified period (e.g 10 days). Place `BUFFER_ZONE` around midpoint. Place stop boundaries beyond min/max by configurable percentage.
+**Calculation:** Find min/max prices over specified period (e.g 10 days). Place `BUFFER_ZONE` around midpoint. The `SELL_TOP_PRICE` equals the maximum price and the `BUY_BOTTOM_PRICE` equals the minimum price observed during the period.
 
 ## Configuration Input
 
@@ -31,12 +29,9 @@ Divides price range into strategic zones:
   "historyMinutes": 14400,      
   // 0.4% for middle buffer (to cover fees)
   "bufferPercentage": 0.004,    
-  // Price goes 5% beyond min/max - we must stop
-  "stopPlankPercentage": 0.05,  
+
   // Check for signal every 1 hour
-  "checkFrequency": 60,         
-  // Minimum time (in minutes) between consecutive BUY or SELL signals (4 hours)
-  "minBuySellFrequency": 240    
+  "checkFrequency": 60         
 }
 ```
 
@@ -49,13 +44,11 @@ Divides price range into strategic zones:
   // UUID for this instance
   "instanceId": "550e8400-e29b-41d4-a716-446655440000", 
   // Current service status
-  "status": "INITIALIZED",                              
+  "status": "INACTIVE",                              
   // Service creation timestamp
   "createdAt": "2025-03-23T14:00:00Z",                  
   // Price zone configuration
   "zoneConfig": {                                       
-    // Emergency upper boundary
-    "stopHighPrice": 92565.51,                          
     // Upper sell zone boundary
     "sellTopPrice": 90750.50,                           
     // Lower sell zone boundary
@@ -64,8 +57,6 @@ Divides price range into strategic zones:
     "buyTopPrice": 87068.75,                            
     // Lower buy zone boundary
     "buyBottomPrice": 83750.50,                         
-    // Emergency lower boundary
-    "stopLowPrice": 82075.49,                           
     // When zones were calculated
     "calculatedAt": "2025-03-23T14:00:00Z",             
     // Start of analysis period
@@ -95,7 +86,7 @@ Emitted when price enters a buy or sell zone and the minimum time since the last
   "symbol": "BTC/USDT",                                 
   // Current price
   "price": 87250.45,                                    
-  // Signal type (BUY/SELL/PAUSE/STOP)
+  // Signal type (BUY/SELL)
   "signal": "BUY"                                       
 }
 ```
@@ -105,13 +96,10 @@ Emitted when price enters a buy or sell zone and the minimum time since the last
 1. **Initialization**: Load config, fetch data, calculate zones
 2. **Monitoring**: Check price at intervals, compare to zones, emit signals
    - Price is checked at the frequency defined by `checkFrequency`
-   - BUY/SELL signals are only emitted if at least `minBuySellFrequency` minutes have passed since the last signal of the same type
 3. **Manual Recalculation**: User explicitly requests zone recalculation when appropriate
 4. **Signals**:
    - **BUY**: Price in BUY_ZONE
    - **SELL**: Price in SELL_ZONE
-   - **PAUSE**: Price in BUFFER_ZONE or out of buy/sell boundaries
-   - **STOP**: Price beyond stop boundaries (requires manual restart)
 
 ## Implementation
 
@@ -139,43 +127,35 @@ The service exposes the following REST endpoints for management and data retriev
 - **Path**: `/api/v1/instances?userId={userId}`
 - **Response**: List of active instances for the user
 
-#### Zone Management
+##### Update Instance
+- **Method**: PUT
+- **Path**: `/api/v1/instances/{instanceId}`
+- **Request Body**: Updated configuration parameters and/or status
+```js
+{
+  // Optional - update configuration
+  "timeframe": 30,
+  "historyMinutes": 7200,
+  "bufferPercentage": 0.005,
+  "checkFrequency": 30,
+  
+  // Optional - update status
+  "status": "ACTIVE" // ACTIVE, INACTIVE
+}
+```
+- **Response**: Updated instance details
 
 ##### Recalculate Zones
 - **Method**: POST
-- **Path**: `/api/v1/instances/{instanceId}/zones/recalculate`
-- **Response**: Updated zone configuration
-
-##### Get Current Zones
-- **Method**: GET
-- **Path**: `/api/v1/instances/{instanceId}/zones`
-- **Response**: Current zone configuration
+- **Path**: `/api/v1/instances/{instanceId}/recalculate`
+- **Response**: Updated instance details with new zone configuration
 
 #### Signal Retrieval
 
 ##### Get Signals
 - **Method**: GET
-- **Path**: `/api/v1/instances/{instanceId}/signals`
-- **Response**: Last 100 signal events ordered by timestamp descending
-
-#### Service Control
-
-##### Change Service Status
-- **Method**: PUT
-- **Path**: `/api/v1/instances/{instanceId}/status`
-- **Request Body**:
-```js
-{
-  "status": "ACTIVE", // ACTIVE, PAUSED, STOPPED
-}
-```
-- **Response**: Updated instance details with new status
-
-##### Update Configuration
-- **Method**: PUT
-- **Path**: `/api/v1/instances/{instanceId}/config`
-- **Request Body**: Updated configuration parameters
-- **Response**: Updated instance details
+- **Path**: `/api/v1/instances/{instanceId}/signals?limit=100`
+- **Response**: Signal events ordered by timestamp descending, up to the specified limit
 
 ## Implementation -> Persistence
 
@@ -197,24 +177,17 @@ The service uses a document database (such as MongoDB, Firestore, or similar) to
   "timeframe": Number,               // e.g., 60 (in minutes)
   "historyMinutes": Number,          // e.g., 14400 (10 days)
   "bufferPercentage": Number,        // e.g., 0.004 (0.4%)
-  "stopPlankPercentage": Number,     // e.g., 0.05 (5%)
+
   "checkFrequency": Number,          // e.g., 60 (in minutes)
-  "minBuySellFrequency": Number,     // e.g., 240 (in minutes)
-  "status": String,                  // e.g., "ACTIVE", "INITIALIZED", "PAUSED", "STOPPED"
+  "status": String,                  // e.g., "ACTIVE" or "INACTIVE"
   "createdAt": Timestamp,            // e.g., "2025-03-23T14:00:00Z"
-  "lastUpdatedAt": Timestamp,        // e.g., "2025-03-23T14:30:00Z"
-  "lastSignalTimestamps": {
-    "BUY": Timestamp,                // e.g., "2025-03-23T14:30:00Z"
-    "SELL": Timestamp                // e.g., "2025-03-22T10:15:00Z"
-  },
+  "lastUpdatedAt": Timestamp,        // e.g., "2025-03-23T14:30:00Z",
   "currentZone": String,             // e.g., "BUFFER_ZONE", "BUY_ZONE", "SELL_ZONE"
   "zoneConfig": {
-    "stopHighPrice": Number,         // e.g., 92565.51
     "sellTopPrice": Number,          // e.g., 90750.50
     "sellBottomPrice": Number,       // e.g., 87431.25
     "buyTopPrice": Number,           // e.g., 87068.75
     "buyBottomPrice": Number,        // e.g., 83750.50
-    "stopLowPrice": Number,          // e.g., 82075.49
     "calculatedAt": Timestamp,       // e.g., "2025-03-23T14:00:00Z"
     "zoneStartsAt": Timestamp,       // e.g., "2025-03-13T14:00:00Z"
     "zoneEndsAt": Timestamp          // e.g., "2025-03-23T14:00:00Z"
@@ -243,7 +216,7 @@ The Instances collection supports these operations:
   "instanceId": UUID,                // e.g., "550e8400-e29b-41d4-a716-446655440000"
   "symbol": String,                  // e.g., "BTC/USDT"
   "price": Number,                   // e.g., 87250.45
-  "signal": String                   // e.g., "BUY", "SELL", "PAUSE", "STOP"
+  "signal": String                   // e.g., "BUY", "SELL"
 }
 ```
 
