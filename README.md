@@ -11,7 +11,7 @@ Divides price range into three strategic zones:
 - `BUFFER_ZONE`: Middle neutral zone (0.4% by default) accounting for transaction fees where no signals are generated
 - `BUY_ZONE`: Lower accumulation region (`BUY_TOP_PRICE` to `BUY_BOTTOM_PRICE`) where BUY signals are generated when price enters
 
-![zone-structure](https://github.com/user-attachments/assets/fe64a599-c645-4deb-b92f-527f8e1a0000)
+![zone-trading-illustration](https://github.com/user-attachments/assets/7c20293d-1613-4441-b086-66b706d896c0)
 
 **Calculation:** Find min/max prices over specified period (e.g 10 days). Place `BUFFER_ZONE` around midpoint. The `SELL_TOP_PRICE` equals the maximum price and the `BUY_BOTTOM_PRICE` equals the minimum price observed during the period.
 
@@ -182,7 +182,6 @@ The service uses a document database (such as MongoDB, Firestore, or similar) to
   "status": String,                  // e.g., "ACTIVE" or "INACTIVE"
   "createdAt": Timestamp,            // e.g., "2025-03-23T14:00:00Z"
   "lastUpdatedAt": Timestamp,        // e.g., "2025-03-23T14:30:00Z",
-  "currentZone": String,             // e.g., "BUFFER_ZONE", "BUY_ZONE", "SELL_ZONE"
   "zoneConfig": {
     "sellTopPrice": Number,          // e.g., 90750.50
     "sellBottomPrice": Number,       // e.g., 87431.25
