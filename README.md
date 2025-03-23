@@ -163,9 +163,8 @@ The service uses a document database to store instance configurations, state, an
 
 ### Collections
 
-#### Instances Collection
+#### Instances
 
-**Document Structure**
 
 ```
 {
@@ -201,9 +200,7 @@ The Instances collection supports these operations:
 - Recalculating and updating price zones
 - Tracking current price zone and last signal timestamps
 
-#### Signals Collection
-
-**Document Structure**
+#### Signals
 
 ```
 {
