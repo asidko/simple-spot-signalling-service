@@ -2,7 +2,7 @@
 
 ## Concept
 
-The Spot Trading Signaling Service monitors cryptocurrency prices and generates BUY and SELL signals based on strategic price zones. It analyzes recent price history to establish buy and sell zones around a middle buffer zone, then emits actionable trading signals when prices enter these zones. The service focuses exclusively on signal generation, not trade execution, allowing for easy integration with various trading systems.
+A service that generates trading signals based on price position within predefined zones. Automates crypto trading decisions.
 
 ## Zone Structure
 
